@@ -1,33 +1,43 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerMovement : MonoBehaviour
 {
-    [SerializeField] private float forwardSpeed = 10f;   // Velocidade para frente (Z)
-    [SerializeField] private float laneDistance = 5f;    // Distância entre as faixas
-    [SerializeField] private float laneSwitchSpeed = 15f; // Velocidade de troca de faixa
-    [SerializeField] private int numLanes = 3;           // Número total de faixas
+    [SerializeField] private float laneSwitchSpeed = 15f;
+    [SerializeField] private int numLanes = 3;
     [SerializeField] private float jumpForce = 7f;
-
-    private int currentLane = 1; // 0 = esquerda, 1 = meio, 2 = direita
+    [SerializeField] private float laneDistance = 5f;
+    private int currentLane = 1;
     private Vector3 targetPosition;
     private Rigidbody rb;
+    private bool alive = true;
 
     private void Start()
     {
-        // Começa na faixa do meio
+        // Player sempre na mesma posição Z
         targetPosition = transform.position;
         rb = GetComponent<Rigidbody>();
+        
+        // Congela a posição Z para o player não se mover para frente
+        rb.constraints = RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezeRotation;
     }
 
     private void Update()
     {
+        if (!alive) return;
+
         HandleInput();
-        MovePlayer();
+        MovePlayerLaterally();
+    }
+
+    void LateUpdate()
+    {
+        CheckAxeY();
     }
 
     private void HandleInput()
     {
-        // Movimentação lateral (A = esquerda / D = direita)
+        // Movimento lateral (esquerda/direita)
         if (Input.GetKeyDown(KeyCode.A))
         {
             currentLane = Mathf.Max(0, currentLane - 1);
@@ -37,35 +47,49 @@ public class PlayerMovement : MonoBehaviour
             currentLane = Mathf.Min(numLanes - 1, currentLane + 1);
         }
 
+        // Pulo
         if (Input.GetKeyDown(KeyCode.Space))
         {
             Jump();
         }
 
-        // Calcula a posição alvo com base na faixa atual
+        // Calcula a posição X do lane
         float targetX = (currentLane - 1) * laneDistance;
-        targetPosition = new Vector3(targetX, transform.position.y, transform.position.z);
+        targetPosition = new Vector3(targetX, targetPosition.y, transform.position.z);
     }
 
     private void Jump()
     {
-        // Verifica se o player está "no chão" (sem considerar pequenas variações de flutuação)
         if (transform.position.y <= 0.01f)
         {
-            // Mantém a velocidade atual em X e Z e aplica força no Y
             Vector3 vel = rb.linearVelocity;
-            vel.y += jumpForce;
+            vel.y = jumpForce;
             rb.linearVelocity = vel;
         }
     }
 
-    private void MovePlayer()
+    private void MovePlayerLaterally()
     {
-        // Movimento para frente constante
-        transform.Translate(Vector3.forward * forwardSpeed * Time.deltaTime);
-
-        // Movimento lateral suave até a posição alvo
-        Vector3 newPosition = Vector3.Lerp(transform.position, targetPosition, laneSwitchSpeed * Time.deltaTime);
+        // Apenas movimento lateral (X), Z fica congelado
+        Vector3 newPosition = Vector3.Lerp(
+            transform.position, 
+            targetPosition, 
+            laneSwitchSpeed * Time.deltaTime
+        );
+        
         transform.position = newPosition;
+    }
+
+    private void CheckAxeY()
+    {
+        if (transform.position.y < -0.01f)
+        {
+            transform.position = new(transform.position.x, 0, transform.position.z);
+        }
+    }
+
+    public void Die()
+    {
+        GameManager.PlayerDied();
     }
 }

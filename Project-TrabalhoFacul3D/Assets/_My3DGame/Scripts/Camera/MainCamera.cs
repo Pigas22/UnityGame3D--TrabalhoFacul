@@ -1,22 +1,35 @@
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 
-public class Camera : UniversalAdditionalCameraData
+public class MainCamera : MonoBehaviour
 {
-    Vector3 position = new Vector3(0, 3, -5);
-    Transform targetTransform;
+    [SerializeField] private Vector3 offset = new Vector3(0, 5, -8);
+    [SerializeField] private float followSpeed = 7f;
+    
+    private Transform playerTransform;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    private void Start()
     {
-        transform.position = position;
-        targetTransform = GameObject.FindWithTag("Player").transform;
+        Transform playerObject = GameObject.FindGameObjectWithTag("Player")?.transform;
+        if (playerObject == null)
+        {
+            Debug.LogError("Player not found! Make sure the Player has the 'Player' tag.");
+            return;
+        }
+        playerTransform = playerObject;
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
-        Vector3 desiredPosition = targetTransform.position + position;
-        transform.position = Vector3.Lerp(transform.position, desiredPosition, Time.deltaTime * 7);
+        if (playerTransform == null) return;
+
+        // Câmera segue apenas a posição X do player (para movimento lateral)
+        Vector3 desiredPosition = playerTransform.position + offset;
+        desiredPosition.z = transform.position.z; // Z da câmera fica fixo
+
+        transform.position = Vector3.Lerp(
+            transform.position, 
+            desiredPosition, 
+            followSpeed * Time.deltaTime
+        );
     }
 }
