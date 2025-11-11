@@ -98,4 +98,5 @@ ServerData/
 # Auto-generated scenes by play mode tests
 [Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
-_OldScripts/
+/**/TextMesh Pro/*
+TextMesh Pro.meta
