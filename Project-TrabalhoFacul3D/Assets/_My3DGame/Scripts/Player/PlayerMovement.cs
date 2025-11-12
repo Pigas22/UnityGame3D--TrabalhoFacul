@@ -5,7 +5,6 @@ public class PlayerMovement : MonoBehaviour
 {
     [SerializeField] private float laneSwitchSpeed = 15f;
     [SerializeField] private int numLanes = 3;
-    [SerializeField] private float jumpForce = 7f;
     [SerializeField] private float laneDistance = 5f;
     private int currentLane = 1;
     private Vector3 targetPosition;
@@ -18,8 +17,13 @@ public class PlayerMovement : MonoBehaviour
         targetPosition = transform.position;
         rb = GetComponent<Rigidbody>();
         
-        // Congela a posição Z para o player não se mover para frente
-        rb.constraints = RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezeRotation;
+        // Desliga a gravidade para este Rigidbody (não afeta outros objetos)
+        rb.useGravity = false;
+        // Congela Z (frente) e Y (altura) para evitar qualquer movimento vertical/penetrações
+        rb.constraints = RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotation;
+        // melhorar física para reduzir jitter interpenetration
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
     }
 
     private void Update()
@@ -30,42 +34,22 @@ public class PlayerMovement : MonoBehaviour
         MovePlayerLaterally();
     }
 
-    void LateUpdate()
-    {
-        CheckAxeY();
-    }
-
     private void HandleInput()
     {
         // Movimento lateral (esquerda/direita)
-        if (Input.GetKeyDown(KeyCode.A))
+        if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
         {
             currentLane = Mathf.Max(0, currentLane - 1);
         }
-        else if (Input.GetKeyDown(KeyCode.D))
+        else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
         {
             currentLane = Mathf.Min(numLanes - 1, currentLane + 1);
         }
 
-        // Pulo
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            Jump();
-        }
-
         // Calcula a posição X do lane
         float targetX = (currentLane - 1) * laneDistance;
-        targetPosition = new Vector3(targetX, targetPosition.y, transform.position.z);
-    }
-
-    private void Jump()
-    {
-        if (transform.position.y <= 0.01f)
-        {
-            Vector3 vel = rb.linearVelocity;
-            vel.y = jumpForce;
-            rb.linearVelocity = vel;
-        }
+        // mantém a altura Y atual (não mover em Y)
+        targetPosition = new(targetX, transform.position.y, transform.position.z);
     }
 
     private void MovePlayerLaterally()
@@ -78,14 +62,6 @@ public class PlayerMovement : MonoBehaviour
         );
         
         transform.position = newPosition;
-    }
-
-    private void CheckAxeY()
-    {
-        if (transform.position.y < -0.01f)
-        {
-            transform.position = new(transform.position.x, 0, transform.position.z);
-        }
     }
 
     public void Die()
